@@ -21,16 +21,22 @@ else
   C_RESET=""; C_HEAD=""; C_STEP=""; C_OK=""; C_WARN=""; C_DIM=""
 fi
 
-# pretty pipes JSON through a formatter when one is available, and passes it
-# through untouched when none is, so the scripts run on a bare machine.
+# pretty formats JSON when a formatter is available, and prints the input
+# unchanged when there is none or when the input is not JSON at all. It must
+# never fail, because it sits at the end of almost every pipeline here.
 pretty() {
-  if command -v jq >/dev/null 2>&1; then
-    jq .
-  elif command -v python3 >/dev/null 2>&1; then
-    python3 -m json.tool 2>/dev/null || cat
-  else
-    cat
+  local body
+  body="$(cat)"
+  if [[ -z "$body" ]]; then
+    printf '    (no response body)\n'
+    return
   fi
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$body" | jq . 2>/dev/null && return
+  elif command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$body" | python3 -m json.tool 2>/dev/null && return
+  fi
+  printf '%s\n' "$body"
 }
 
 section() {
@@ -46,11 +52,36 @@ warn() { printf '%s    %s%s\n' "$C_WARN" "$1" "$C_RESET"; }
 
 # execute POSTs one operation to the gateway.
 #   execute <request_id> <operation> [arguments_json] [options_json]
+#
+# It always writes a valid envelope to stdout, including when curl itself fails
+# before any envelope could be received. Two reasons for that.
+#
+# First, everything downstream parses this output as JSON, and a client-side
+# hiccup should not turn into a Python traceback in the middle of the
+# transcript. Under WSL in particular, the localhost forwarder occasionally
+# resets a connection to a Windows-published port.
+#
+# Second, the substitute envelope is labelled CLIENT_TRANSPORT_ERROR precisely
+# so it can never be mistaken for something the gateway said. The failure is in
+# the demo client, and the transcript should say so.
+#
+# Deliberately no retry here. If curl dropped the connection after the gateway
+# had already dispatched the work, re-sending would execute the operation a
+# second time, and section 6 relies on the backend ledger showing exactly one
+# execution. A missing answer is better than a corrupted measurement.
 execute() {
   local rid="$1" op="$2" args="${3:-{\}}" opts="${4:-{\}}"
-  curl -sS -m 30 -X POST "$GATEWAY/execute" \
+  local body
+  body="$(curl -sS -m 30 -X POST "$GATEWAY/execute" \
     -H 'Content-Type: application/json' \
-    -d "{\"request_id\":\"$rid\",\"operation\":\"$op\",\"arguments\":$args,\"options\":$opts}"
+    -d "{\"request_id\":\"$rid\",\"operation\":\"$op\",\"arguments\":$args,\"options\":$opts}" 2>/dev/null)"
+
+  if [[ -z "$body" || "${body:0:1}" != "{" ]]; then
+    printf '{"request_id":"%s","status":"error","service_id":null,"operation":"%s","result":null,"error":{"code":"CLIENT_TRANSPORT_ERROR","message":"the demo client could not read a reply from the gateway; this is a client-side failure, not a gateway response","retryable":true}}' \
+      "$rid" "$op"
+    return
+  fi
+  printf '%s' "$body"
 }
 
 # execute_show prints the request line and the envelope it produced.
@@ -60,7 +91,18 @@ execute_show() {
   execute "$rid" "$op" "$args" "$opts" | pretty
 }
 
-gw_get() { curl -sS -m 15 "$GATEWAY$1"; }
+# gw_get reads a gateway endpoint, and like execute it guarantees JSON on
+# stdout so the parsers further down the pipeline cannot blow up on an empty
+# body.
+gw_get() {
+  local body
+  body="$(curl -sS -m 15 "$GATEWAY$1" 2>/dev/null)"
+  if [[ -z "$body" || ( "${body:0:1}" != "{" && "${body:0:1}" != "[" ) ]]; then
+    printf '{"status":"error","error":{"code":"CLIENT_TRANSPORT_ERROR","message":"could not read %s from the gateway"},"services":[],"backends":{},"runtime":{},"metrics":{},"breakers":{},"transports":{}}' "$1"
+    return
+  fi
+  printf '%s' "$body"
+}
 
 admin() {
   local method="$1" path="$2" body="${3:-}"

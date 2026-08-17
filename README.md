@@ -42,19 +42,16 @@ docker compose up -d     # gateway siap di http://localhost:8080
 docker compose logs -f gateway
 ```
 
-Di PowerShell, `./demo/run-all.sh` tidak akan berjalan karena PowerShell tidak
-mengeksekusi file `.sh`, ia hanya membukanya. Pakai wrapper-nya:
+Skrip demonstrasi ditulis untuk bash. Di Windows, jalankan lewat WSL atau Git
+Bash, bukan dari PowerShell. PowerShell tidak mengeksekusi file `.sh`, ia hanya
+membukanya, jadi perintahnya akan terlihat seolah tidak melakukan apa-apa.
+
+Kalau memang harus dipanggil dari PowerShell, tunjuk bash-nya secara eksplisit:
 
 ```powershell
-docker compose up -d
-.\demo\run-all.ps1        # atau .\demo\run-all.ps1 --core
-```
-
-Wrapper itu mencari Git Bash lalu mendelegasikan ke skrip aslinya. Alternatifnya
-buka Git Bash langsung, atau panggil bash-nya secara eksplisit dari PowerShell:
-
-```powershell
-& "C:\Program Files\Git\bin\bash.exe" demo/run-all.sh
+wsl ./demo/run-all.sh
+# atau
+& bash demo/run-all.sh
 ```
 
 Image gateway dibangun dari `src/`, dan proses build-nya menjalankan `go vet`

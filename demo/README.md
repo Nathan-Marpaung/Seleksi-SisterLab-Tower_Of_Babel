@@ -5,14 +5,9 @@ docker compose up -d          # from the repository root
 ./demo/run-all.sh             # or --core / --bonus
 ```
 
-On Windows PowerShell, `./demo/run-all.sh` will not run: PowerShell does not
-execute `.sh` files, it just opens them. Use the wrapper instead, which locates
-Git Bash and delegates to the same script:
-
-```powershell
-docker compose up -d
-.\demo\run-all.ps1            # or .\demo\run-all.ps1 --core
-```
+On Windows, run this from WSL or Git Bash rather than PowerShell. PowerShell
+does not execute `.sh` files, it only opens them, so the command appears to do
+nothing at all.
 
 Requirements: `bash`, `curl`, `python3`. `jq` is used for pretty-printing when
 present and skipped when it is not. A full run takes about a minute and exits 0.
@@ -22,7 +17,6 @@ present and skipped when it is not. A full run takes about a minute and exits 0.
 | `01-core.sh` | The nine points the specification asks to be demonstrated |
 | `02-bonus.sh` | Runtime adapter loading, protocol migration, advanced networking, failure isolation |
 | `run-all.sh` | Both, then resets the fault environment |
-| `run-all.ps1` | PowerShell entry point that delegates to `run-all.sh` |
 | `lib.sh` | Shared helpers: gateway calls, control-plane calls, ledger summaries |
 | `adapters/` | Adapter specifications the bonus demo loads at runtime |
 

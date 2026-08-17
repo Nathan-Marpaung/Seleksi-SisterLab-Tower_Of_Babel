@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Permintaan execute Service A",
+  "type": "object",
+  "required": ["operation_name", "operation_arguments"],
+  "additionalProperties": false,
+  "properties": {
+    "operation_name": {
+      "type": "string",
+      "enum": ["echo", "uppercase", "metadata"]
+    },
+    "operation_arguments": {
+      "type": "object"
+    }
+  }
+}

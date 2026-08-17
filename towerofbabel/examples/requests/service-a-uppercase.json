@@ -1,0 +1,13 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Protocol-Version": "1",
+    "X-Request-ID": "example-a-1"
+  },
+  "body": {
+    "operation_name": "uppercase",
+    "operation_arguments": {
+      "value": "babel"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "request_id": "example-a-1",
+  "service_name": "service-a",
+  "operation_name": "uppercase",
+  "operation_result": {
+    "value": "BABEL"
+  }
+}

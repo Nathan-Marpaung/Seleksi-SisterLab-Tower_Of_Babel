@@ -1,0 +1,52 @@
+services:
+  service-a:
+    image: babel-go-service-a:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8101:8101"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  service-b:
+    image: babel-go-service-b:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8201:8201"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  service-c:
+    image: babel-go-service-c:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8301:8301/udp"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  control-plane:
+    image: babel-go-control-plane:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+      BABEL_CONTROL_TOKEN: ${BABEL_CONTROL_TOKEN:-babel-local-dev}
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+networks:
+  babel-network:
+    name: babel-network
+
+volumes:
+  babel-state:

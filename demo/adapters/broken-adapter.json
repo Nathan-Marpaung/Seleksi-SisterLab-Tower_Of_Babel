@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "A deliberately wrong adapter, used to demonstrate that a bad hot-load is rejected",
+    "and the running adapter is left untouched.",
+    "",
+    "The defect is subtle on purpose: everything is structurally valid, but `sum` maps its",
+    "argument list to `numbers` instead of `numberList`. Nothing catches that by",
+    "inspection -- it is caught because the adapter can no longer reproduce the recorded",
+    "request bytes for a real sum call. That is the whole reason golden vectors exist here",
+    "rather than a schema check.",
+    "",
+    "Load this over the live tcp-frame-json-v1 adapter and the gateway must refuse it,",
+    "report which vector failed, and keep serving service-b traffic without interruption."
+  ],
+  "name": "tcp-frame-json-v1",
+  "family": "tcp-frame-json",
+  "service_id": "service-b",
+  "version": 1,
+  "wire": {
+    "magic_hex": "babe",
+    "max_payload": 65536,
+    "operation_field": "opCode",
+    "arguments_field": "args",
+    "correlation_field": "requestId",
+    "result_field": "resultData",
+    "error_field": "errorData",
+    "error_code_field": "code",
+    "error_message_field": "message",
+    "error_retryable_field": "retryable"
+  },
+  "operations": {
+    "echo": { "wire": "ECHO", "result_keys": ["value", "numericResult"] },
+    "uppercase": { "wire": "UPPERCASE", "result_keys": ["value", "numericResult"] },
+    "reverse": { "wire": "REVERSE", "result_keys": ["value", "numericResult"] },
+    "sum": {
+      "wire": "SUM",
+      "arg_map": { "values": "numbers" },
+      "result_keys": ["numericResult", "value"]
+    },
+    "metadata": { "wire": "METADATA", "passthrough": true }
+  },
+  "self_test": [
+    {
+      "name": "sum renames its argument list",
+      "operation": "sum",
+      "arguments": { "values": [1, 2, 3] },
+      "correlation_id": 1234605616436508552,
+      "expect_request_hex": "babe01000000002e11223344556677887b2261726773223a7b226e756d6265724c697374223a5b312c322c335d7d2c226f70436f6465223a2253554d227d",
+      "response_hex": "babe01000000006b11223344556677887b226572726f7244617461223a6e756c6c2c22726571756573744964223a313233343630353631363433363530383535322c22726573756c7444617461223a7b226e756d65726963526573756c74223a367d2c22736572766963654964223a22736572766963652d62227d",
+      "expect_result": { "value": 6 }
+    }
+  ]
+}

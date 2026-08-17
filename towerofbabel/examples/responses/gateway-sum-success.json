@@ -1,0 +1,10 @@
+{
+  "request_id": "client-001",
+  "status": "success",
+  "service_id": "service-c",
+  "operation": "sum",
+  "result": {
+    "value": 6
+  },
+  "error": null
+}

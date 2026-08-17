@@ -1,0 +1,114 @@
+# Babel gateway, submitted stack.
+#
+# `docker compose up -d` brings up the three reference backends, the fault
+# control plane, and the gateway itself, reachable from the host at
+# http://localhost:8080 as the integration guide requires.
+#
+# The four provided services are reproduced here verbatim from
+# towerofbabel/docker-compose.yml so that this single file stands alone; the
+# provided kit is left untouched.
+
+services:
+  service-a:
+    image: babel-go-service-a:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8101:8101"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  service-b:
+    image: babel-go-service-b:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8201:8201"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  service-c:
+    image: babel-go-service-c:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+    ports:
+      - "127.0.0.1:8301:8301/udp"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  control-plane:
+    image: babel-go-control-plane:local
+    environment:
+      BABEL_STATE_DIR: /state
+      BABEL_SEED: ${BABEL_SEED:-1}
+      BABEL_CONTROL_TOKEN: ${BABEL_CONTROL_TOKEN:-babel-local-dev}
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - babel-state:/state
+    networks: [babel-network]
+
+  gateway:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    image: babel-gateway:local
+    # Published on all interfaces, unlike the backends: this is the one port a
+    # grader is documented to reach, at http://localhost:8080.
+    ports:
+      - "8080:8080"
+    environment:
+      # Backend endpoints, resolved on the compose network.
+      BABEL_SERVICE_A_URL: http://service-a:8101
+      BABEL_SERVICE_B_ADDR: service-b:8201
+      BABEL_SERVICE_C_ADDR: service-c:8301
+
+      # The registry, routing metadata, capability metadata and any adapter
+      # loaded at runtime all live here, on a named volume, so every one of
+      # them survives `docker compose restart gateway`.
+      BABEL_GATEWAY_STATE_DIR: /data
+
+      BABEL_LISTEN_ADDR: ":8080"
+      BABEL_LOG_LEVEL: ${BABEL_LOG_LEVEL:-info}
+
+      # Domain-level failures answer 200 with a fully populated error envelope,
+      # because the reference client calls raise_for_status() and a non-2xx
+      # reply would hide the envelope it is meant to evaluate. Set true for the
+      # literal 408/503/429 mapping instead; the envelope is identical.
+      BABEL_STRICT_HTTP_STATUS: ${BABEL_STRICT_HTTP_STATUS:-false}
+
+      # A preferred_service that cannot serve the requested operation is
+      # routed by capability instead of refused. "strict" selects the other
+      # reading permitted by the contract.
+      BABEL_PREFERRED_INCAPABLE: ${BABEL_PREFERRED_INCAPABLE:-fallback}
+
+      # Leave empty to keep the operator API open inside the compose network;
+      # set a value to require X-Babel-Admin-Token on /admin/*.
+      BABEL_ADMIN_TOKEN: ${BABEL_ADMIN_TOKEN:-}
+    volumes:
+      - babel-gateway-state:/data
+    depends_on:
+      - service-a
+      - service-b
+      - service-c
+    # The gateway starts and serves even when every backend is down -- it
+    # reports them unavailable rather than refusing to boot -- so depends_on is
+    # ordering only, deliberately without a health condition.
+    restart: unless-stopped
+    networks: [babel-network]
+
+networks:
+  babel-network:
+    name: babel-network
+
+volumes:
+  babel-state:
+  # Separate from the backends' volume: gateway state is the gateway's own, and
+  # resetting the fault environment must not erase the registry.
+  babel-gateway-state:

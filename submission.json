@@ -1,0 +1,20 @@
+{
+  "nim_anda": "13524062",
+  "bonus": {
+    "migrasi_protokol_runtime": {
+      "diimplementasikan": true
+    },
+    "kompatibilitas": {
+      "diimplementasikan": true
+    },
+    "adapter_runtime": {
+      "diimplementasikan": true
+    },
+    "integrasi_lanjutan": {
+      "diimplementasikan": true
+    },
+    "hiura's_bonus": {
+      "diimplementasikan": true
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "_comment": [
+    "A protocol-version-2 adapter for Service B, used by the runtime migration demo.",
+    "Structurally it is the v1 adapter with the version bumped, which is exactly what a",
+    "real minor protocol revision looks like: the framing and field names are unchanged,",
+    "only the version byte moves. Its self-test vectors are the recorded v1 exchanges with",
+    "the version byte flipped, so the adapter still has to reproduce real framing byte for",
+    "byte before the gateway will load it.",
+    "",
+    "The reference backend only speaks version 1, so once this variant carries traffic the",
+    "gateway will see version-1 responses it must reject. That is the point of the demo:",
+    "a canary rollout onto a version the backend does not actually serve has to fail",
+    "safely, be visible, and be reversible -- not corrupt anything."
+  ],
+  "name": "tcp-frame-json-v2",
+  "family": "tcp-frame-json",
+  "service_id": "service-b",
+  "version": 2,
+  "wire": {
+    "magic_hex": "babe",
+    "max_payload": 65536,
+    "operation_field": "opCode",
+    "arguments_field": "args",
+    "correlation_field": "requestId",
+    "result_field": "resultData",
+    "error_field": "errorData",
+    "error_code_field": "code",
+    "error_message_field": "message",
+    "error_retryable_field": "retryable"
+  },
+  "operations": {
+    "echo": { "wire": "ECHO", "result_keys": ["value", "numericResult"] },
+    "uppercase": { "wire": "UPPERCASE", "result_keys": ["value", "numericResult"] },
+    "reverse": { "wire": "REVERSE", "result_keys": ["value", "numericResult"] },
+    "sum": {
+      "wire": "SUM",
+      "arg_map": { "values": "numberList" },
+      "result_keys": ["numericResult", "value"]
+    },
+    "metadata": { "wire": "METADATA", "passthrough": true }
+  },
+  "self_test": [
+    {
+      "name": "echo round trip",
+      "operation": "echo",
+      "arguments": { "value": "babel" },
+      "correlation_id": 1234605616436508552,
+      "expect_request_hex": "babe02000000002a11223344556677887b2261726773223a7b2276616c7565223a22626162656c227d2c226f70436f6465223a224543484f227d",
+      "response_hex": "babe02000000006911223344556677887b226572726f7244617461223a6e756c6c2c22726571756573744964223a313233343630353631363433363530383535322c22726573756c7444617461223a7b2276616c7565223a22626162656c227d2c22736572766963654964223a22736572766963652d62227d",
+      "expect_result": { "value": "babel" }
+    },
+    {
+      "name": "sum renames its argument list",
+      "operation": "sum",
+      "arguments": { "values": [1, 2, 3] },
+      "correlation_id": 1234605616436508552,
+      "expect_request_hex": "babe02000000002e11223344556677887b2261726773223a7b226e756d6265724c697374223a5b312c322c335d7d2c226f70436f6465223a2253554d227d",
+      "response_hex": "babe02000000006b11223344556677887b226572726f7244617461223a6e756c6c2c22726571756573744964223a313233343630353631363433363530383535322c22726573756c7444617461223a7b226e756d65726963526573756c74223a367d2c22736572766963654964223a22736572766963652d62227d",
+      "expect_result": { "value": 6 }
+    },
+    {
+      "name": "reverse round trip",
+      "operation": "reverse",
+      "arguments": { "value": "babel" },
+      "correlation_id": 1234605616436508552,
+      "expect_request_hex": "babe02000000002d11223344556677887b2261726773223a7b2276616c7565223a22626162656c227d2c226f70436f6465223a2252455645525345227d",
+      "response_hex": "babe02000000006911223344556677887b226572726f7244617461223a6e756c6c2c22726571756573744964223a313233343630353631363433363530383535322c22726573756c7444617461223a7b2276616c7565223a226c65626162227d2c22736572766963654964223a22736572766963652d62227d",
+      "expect_result": { "value": "lebab" }
+    },
+    {
+      "name": "a version-1 response must be rejected by a version-2 adapter",
+      "operation": "echo",
+      "correlation_id": 1234605616436508552,
+      "response_hex": "babe01000000006911223344556677887b226572726f7244617461223a6e756c6c2c22726571756573744964223a313233343630353631363433363530383535322c22726573756c7444617461223a7b2276616c7565223a22626162656c227d2c22736572766963654964223a22736572766963652d62227d",
+      "expect_error_code": "UNSUPPORTED_PROTOCOL_VERSION"
+    }
+  ]
+}

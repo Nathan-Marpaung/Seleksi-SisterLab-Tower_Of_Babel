@@ -1,0 +1,11 @@
+{
+  "request_id": "client-001",
+  "operation": "sum",
+  "arguments": {
+    "values": [1, 2, 3]
+  },
+  "options": {
+    "preferred_service": "service-c",
+    "timeout_ms": 2000
+  }
+}

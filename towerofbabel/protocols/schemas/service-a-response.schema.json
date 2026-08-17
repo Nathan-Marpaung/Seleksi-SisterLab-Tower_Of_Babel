@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tanggapan execute Service A",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["request_id", "service_name", "operation_name", "operation_result"],
+      "properties": {
+        "request_id": { "type": "string" },
+        "service_name": { "const": "service-a" },
+        "operation_name": { "type": "string" },
+        "operation_result": { "type": "object" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["request_id", "error_code", "error_message", "retryable"],
+      "properties": {
+        "request_id": { "type": "string" },
+        "error_code": { "type": "string" },
+        "error_message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  ]
+}
